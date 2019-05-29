@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.36.3 documentation</title>
+  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.37.0 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.36.3
+                0.37.0
               </div>
             
           
@@ -793,7 +793,7 @@ K,4,0,1,0
 
     <span class="c1"># to access the results you could have run:</span>
     <span class="c1"># resultfile = os.path.join(ansys.path, &#39;%s.rst&#39; % ansys.jobname)</span>
-    <span class="c1"># result = pyansys.open_result(result file)</span>
+    <span class="c1"># result = pyansys.read_binary(result file)</span>
 
     <span class="c1"># Get maximum von Mises stress at result 1</span>
     <span class="n">nodenum</span><span class="p">,</span> <span class="n">stress</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">principal_nodal_stress</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>  <span class="c1"># 0 as it&#39;s zero based indexing</span>

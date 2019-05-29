@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ANSYS APDL Interactive Control Examples &mdash; pyansys 0.36.3 documentation</title>
+  <title>ANSYS APDL Interactive Control Examples &mdash; pyansys 0.37.0 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.36.3
+                0.37.0
               </div>
             
           
@@ -391,7 +391,7 @@ SAVE
 <p>Access and plot the results within python using pyansys:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># open the result file using the path used in ANSYS</span>
 <span class="n">resultfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">ansys</span><span class="o">.</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="n">resultfile</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="n">resultfile</span><span class="p">)</span>
 
 <span class="c1"># access element results as arrays</span>
 <span class="n">nnum</span><span class="p">,</span> <span class="n">stress</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">nodal_stress</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
@@ -575,7 +575,7 @@ FINISH
 
 <span class="c1"># Open the result file and plot the displacement of time step 3</span>
 <span class="n">resultfile</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="n">resultfile</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="n">resultfile</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">PlotNodalResult</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
 </pre></div>
 </div>

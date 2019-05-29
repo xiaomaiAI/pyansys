@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Working with a ANSYS Result File (rst) &mdash; pyansys 0.36.3 documentation</title>
+  <title>Working with a ANSYS Result File (rst) &mdash; pyansys 0.37.0 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.36.3
+                0.37.0
               </div>
             
           
@@ -196,7 +196,7 @@
 <h2>Loading the Result File<a class="headerlink" href="#loading-the-result-file" title="Permalink to this headline">¶</a></h2>
 <p>As the ANSYS result files are binary files, the entire file does not need to be loaded into memory in order to retrieve results.  This module accesses the results through a python object <cite>result</cite> which you can create with:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyansys</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>Upon initialization the <code class="docutils literal notranslate"><span class="pre">ResultFile</span></code> object contains several properties to include the time values from the analysis, node numbering, element numbering, etc.</p>
@@ -305,7 +305,7 @@ accessing:</p>
 </div>
 <p>This block of code shows how you can access the non-averaged stresses for the first result from a modal analysis.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyansys</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="s1">&#39;file.rst&#39;</span><span class="p">)</span>
 <span class="n">estress</span><span class="p">,</span> <span class="n">elem</span><span class="p">,</span> <span class="n">enode</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">element_stress</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -352,7 +352,7 @@ accessing:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pyansys</span> <span class="kn">import</span> <span class="n">examples</span>
 <span class="kn">import</span> <span class="nn">pyansys</span>
 
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="n">examples</span><span class="o">.</span><span class="n">rstfile</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="n">examples</span><span class="o">.</span><span class="n">rstfile</span><span class="p">)</span>
 <span class="n">result</span><span class="o">.</span><span class="n">animate_nodal_solution</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
 </pre></div>
 </div>
@@ -364,7 +364,7 @@ accessing:</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyansys</span>
 
 <span class="c1"># load the result file</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="s1">&#39;rotor.rst&#39;</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="s1">&#39;rotor.rst&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 <p>You can reference the load step table and harmonic index tables by printing the result header dictionary keys <code class="docutils literal notranslate"><span class="pre">'ls_table'</span></code> and <code class="docutils literal notranslate"><span class="pre">'hindex'</span></code>:</p>
@@ -445,7 +445,7 @@ accessing:</p>
 <span class="kn">from</span> <span class="nn">pyansys</span> <span class="kn">import</span> <span class="n">examples</span>
 
 <span class="c1"># load example beam result file</span>
-<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">open_result</span><span class="p">(</span><span class="n">examples</span><span class="o">.</span><span class="n">rstfile</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="n">examples</span><span class="o">.</span><span class="n">rstfile</span><span class="p">)</span>
 
 <span class="c1"># save as a binary vtk xml file</span>
 <span class="n">result</span><span class="o">.</span><span class="n">save_as_vtk</span><span class="p">(</span><span class="s1">&#39;beam.vtu&#39;</span><span class="p">)</span>

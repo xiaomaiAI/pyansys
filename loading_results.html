@@ -104,6 +104,7 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#accessing-solution-results">Accessing Solution Results</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#accessing-element-solution-data">Accessing Element Solution Data</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#animiating-a-modal-solution">Animiating a Modal Solution</a></li>
 </ul>
 </li>
@@ -346,6 +347,23 @@ accessing:</p>
  <span class="mi">10920</span>   <span class="mf">49788.</span>      <span class="mf">8798.7</span>     <span class="o">-</span><span class="mf">21929.</span>     <span class="o">-</span><span class="mf">7302.5</span>      <span class="mf">11294.</span>      <span class="mf">4300.0</span>
 </pre></div>
 </div>
+<div class="section" id="accessing-element-solution-data">
+<h3>Accessing Element Solution Data<a class="headerlink" href="#accessing-element-solution-data" title="Permalink to this headline">¶</a></h3>
+<p>Individual element results for the entire solution can be accessed using the <code class="docutils literal notranslate"><span class="pre">element_solution_data</span></code> method.  For example, to get the volume of each element:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pyansys</span>
+
+<span class="n">rst</span> <span class="o">=</span> <span class="n">pyansys</span><span class="o">.</span><span class="n">read_binary</span><span class="p">(</span><span class="s1">&#39;./file.rst&#39;</span><span class="p">)</span>
+<span class="n">enum</span><span class="p">,</span> <span class="n">edata</span> <span class="o">=</span> <span class="n">rst</span><span class="o">.</span><span class="n">element_solution_data</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">datatype</span><span class="o">=</span><span class="s1">&#39;ENG&#39;</span><span class="p">)</span>
+
+<span class="c1"># output as a list, but can be viewed as an array since</span>
+<span class="c1"># the results for each element are the same size</span>
+<span class="n">edata</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">edata</span><span class="p">)</span>
+<span class="n">volume</span> <span class="o">=</span> <span class="n">edata</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>Documentation for the underlying results can be found in <a class="reference external" href="https://www.sharcnet.ca/Software/Ansys/16.2.3/en-us/help/ans_prog/Hlp_P_INT1_2.html">Description of the Results File</a>.</p>
+</div>
 <div class="section" id="animiating-a-modal-solution">
 <h3>Animiating a Modal Solution<a class="headerlink" href="#animiating-a-modal-solution" title="Permalink to this headline">¶</a></h3>
 <p>Solutions from a modal analysis can be animated using <code class="docutils literal notranslate"><span class="pre">animate_nodal_solution</span></code>.  For example:</p>
@@ -555,6 +573,19 @@ A single loop of the mode will be recorded.</p>
 </dl>
 <p class="rubric">Notes</p>
 <p>See ANSYS element documentation for available items for each element type.</p>
+<dl class="simple">
+<dt>ENG - Element volume and energies.</dt><dd><p>volume: Element volume
+senergy: Element energy associated with the stiffness matrix
+aenergy: Artificial hourglass energy
+kenergy: Kinetic energy
+coenergy: Co-energy (magnetics)
+incenergy: Position not used
+position not used
+thenergy: Thermal dissipation energy (see ThermMat, shell131/132 only)
+position not used
+position not used</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">

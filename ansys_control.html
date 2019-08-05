@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.37.4 documentation</title>
+  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.37.5 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.37.4
+                0.37.5
               </div>
             
           
@@ -957,6 +957,12 @@ not write command to log even through APDL command logging is enabled.</p></li>
 <dd><p>Check if plot exists based on command output</p>
 </dd></dl>
 
+<dl class="attribute">
+<dt id="pyansys.ANSYS.jobname">
+<code class="descname">jobname</code><a class="headerlink" href="#pyansys.ANSYS.jobname" title="Permalink to this definition">¶</a></dt>
+<dd><p>MAPDL job name</p>
+</dd></dl>
+
 <dl class="method">
 <dt id="pyansys.ANSYS.kill">
 <code class="descname">kill</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.ANSYS.kill" title="Permalink to this definition">¶</a></dt>
@@ -982,8 +988,13 @@ not write command to log even through APDL command logging is enabled.</p></li>
 
 <dl class="method">
 <dt id="pyansys.ANSYS.open_gui">
-<code class="descname">open_gui</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.ANSYS.open_gui" title="Permalink to this definition">¶</a></dt>
+<code class="descname">open_gui</code><span class="sig-paren">(</span><em>include_result=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.ANSYS.open_gui" title="Permalink to this definition">¶</a></dt>
 <dd><p>Saves existing database and opens up APDL GUI</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>include_result</strong> (<em>bool</em><em>, </em><em>optional</em>) – Allow the result file to be post processed in the GUI.</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="method">

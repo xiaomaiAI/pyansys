@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Shaft Modal Analysis &mdash; pyansys 0.38.1 documentation</title>
+  <title>Shaft Modal Analysis &mdash; pyansys 0.39.0 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.38.1
+                0.39.0
               </div>
             
           
@@ -89,7 +89,6 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../ansys_control.html">ANSYS APDL Interactive Control</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../ansys_functions.html">ANSYS Functions</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../ansys_functions.html#available-commands">Available Commands</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../apdl_conversion.html">APDL Conversion Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../ansys_examples.html">ANSYS APDL Interactive Control Examples</a></li>
 </ul>
@@ -99,7 +98,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../loading_results.html">Working with a ANSYS Result File (rst)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../examples.html">Archive and Result File Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../loading_km.html">Working with a ANSYS Full File (full)</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../loading_emat.html">Working with a ANSYS Element Matrix File (*.emat)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../loading_emat.html">Working with a ANSYS Element Matrix File (.emat)</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../index.html">Result Visulization Gallery</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../index.html#loading-and-visualizing-result-files">Loading and Visualizing Result Files</a><ul class="current">
 <li class="toctree-l3 current"><a class="current reference internal" href="#">Shaft Modal Analysis</a></li>
@@ -177,8 +176,8 @@
            <div itemprop="articleBody">
             
   <div class="sphx-glr-download-link-note admonition note">
-<p class="admonition-title">Note</p>
-<p>Click <a class="reference internal" href="#sphx-glr-download-examples-00-read-binary-load-shaft-result-py"><span class="std std-ref">here</span></a> to download the full example code</p>
+<p class="first admonition-title">Note</p>
+<p class="last">Click <a class="reference internal" href="#sphx-glr-download-examples-00-read-binary-load-shaft-result-py"><span class="std std-ref">here</span></a> to download the full example code</p>
 </div>
 <div class="sphx-glr-example-title section" id="shaft-modal-analysis">
 <span id="ref-load-shaft-result"></span><span id="sphx-glr-examples-00-read-binary-load-shaft-result-py"></span><h1>Shaft Modal Analysis<a class="headerlink" href="#shaft-modal-analysis" title="Permalink to this headline">¶</a></h1>
@@ -202,13 +201,13 @@
 </pre></div>
 </div>
 <p class="sphx-glr-script-out">Out:</p>
-<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>UnstructuredGrid (0x7f426712df48)
+<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>UnstructuredGrid (0x7f8f22f9a648)
   N Cells:      25051
   N Points:     27132
   X Bounds:     0.000e+00, 2.700e+02
   Y Bounds:     -4.000e+01, 4.000e+01
   Z Bounds:     -4.000e+01, 4.000e+01
-  N Arrays:     21
+  N Scalars:    21
 </pre></div>
 </div>
 <p>Plot the shaft</p>
@@ -218,10 +217,6 @@
 </pre></div>
 </div>
 <img alt="../../_images/sphx_glr_load_shaft_result_001.png" class="sphx-glr-single-img" src="../../_images/sphx_glr_load_shaft_result_001.png" />
-<p class="sphx-glr-script-out">Out:</p>
-<div class="sphx-glr-script-out highlight-none notranslate"><div class="highlight"><pre><span></span>WARNING:root:`.plot()` is deprecated. Please use `.show()` instead.
-</pre></div>
-</div>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">shaft</span><span class="o">.</span><span class="n">node_components</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
 </pre></div>
 </div>
@@ -276,16 +271,14 @@
 </pre></div>
 </div>
 <img alt="../../_images/sphx_glr_load_shaft_result_008.png" class="sphx-glr-single-img" src="../../_images/sphx_glr_load_shaft_result_008.png" />
-<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> ( 0 minutes  6.272 seconds)</p>
+<p class="sphx-glr-timing"><strong>Total running time of the script:</strong> ( 0 minutes  2.163 seconds)</p>
 <div class="sphx-glr-footer class sphx-glr-footer-example docutils container" id="sphx-glr-download-examples-00-read-binary-load-shaft-result-py">
 <div class="sphx-glr-download docutils container">
-<p><a class="reference download internal" download="" href="../../_downloads/0d39ed7668e1343e3a45896cd1e5db29/load_shaft_result.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">load_shaft_result.py</span></code></a></p>
-</div>
+<a class="reference download internal" download="" href="../../_downloads/aa1dc9b950c0526a443d3a3d6217f297/load_shaft_result.py"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Python</span> <span class="pre">source</span> <span class="pre">code:</span> <span class="pre">load_shaft_result.py</span></code></a></div>
 <div class="sphx-glr-download docutils container">
-<p><a class="reference download internal" download="" href="../../_downloads/7fb25713d315ff3246c6aa04dde67e5c/load_shaft_result.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">load_shaft_result.ipynb</span></code></a></p>
+<a class="reference download internal" download="" href="../../_downloads/1a056aa8e838e3116dbef9e3457554e0/load_shaft_result.ipynb"><code class="xref download docutils literal notranslate"><span class="pre">Download</span> <span class="pre">Jupyter</span> <span class="pre">notebook:</span> <span class="pre">load_shaft_result.ipynb</span></code></a></div>
 </div>
-</div>
-<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.github.io">Gallery generated by Sphinx-Gallery</a></p>
+<p class="sphx-glr-signature"><a class="reference external" href="https://sphinx-gallery.readthedocs.io">Gallery generated by Sphinx-Gallery</a></p>
 </div>
 
 

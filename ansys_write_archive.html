@@ -317,7 +317,7 @@ element numbers.  Default False.</p></li>
 
 <dl class="function">
 <dt id="pyansys.archive.save_as_archive">
-<code class="sig-prename descclassname">pyansys.archive.</code><code class="sig-name descname">save_as_archive</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">grid</em>, <em class="sig-param">mtype_start=1</em>, <em class="sig-param">etype_start=1</em>, <em class="sig-param">real_constant_start=1</em>, <em class="sig-param">mode='w'</em>, <em class="sig-param">nblock=True</em>, <em class="sig-param">enum_start=1</em>, <em class="sig-param">nnum_start=1</em>, <em class="sig-param">include_etype_header=True</em>, <em class="sig-param">line_ending=None</em>, <em class="sig-param">reset_etype=False</em>, <em class="sig-param">allow_missing=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.archive.save_as_archive" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">pyansys.archive.</code><code class="sig-name descname">save_as_archive</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">grid</em>, <em class="sig-param">mtype_start=1</em>, <em class="sig-param">etype_start=1</em>, <em class="sig-param">real_constant_start=1</em>, <em class="sig-param">mode='w'</em>, <em class="sig-param">nblock=True</em>, <em class="sig-param">enum_start=1</em>, <em class="sig-param">nnum_start=1</em>, <em class="sig-param">include_etype_header=True</em>, <em class="sig-param">reset_etype=False</em>, <em class="sig-param">allow_missing=True</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.archive.save_as_archive" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writes FEM as an ANSYS APDL archive file.  This function
 supports the following element types:</p>
 <blockquote>
@@ -358,7 +358,6 @@ manually set by adding the point array “ansys_node_num” to the
 unstructured grid.</p></li>
 <li><p><strong>include_etype_header</strong> (<em>bool</em><em>, </em><em>optional</em>) – For each element type, includes element type command
 (e.g. “ET, 1, 186”) in the archive file.</p></li>
-<li><p><strong>line_ending</strong> (<em>str</em><em>, </em><em>optional</em>) – Defaults to windows line ending.</p></li>
 <li><p><strong>reset_etype</strong> (<em>bool</em><em>, </em><em>optional</em>) – Resets element type.  Element types will automatically be
 determined by the shape of the element (i.e. quadradic
 tetrahedrals will be saved as SOLID187, linear hexahedrals as
@@ -393,7 +392,7 @@ SOLID185).  Default True.</p></li>
 
 <dl class="function">
 <dt id="pyansys.archive.write_nblock">
-<code class="sig-prename descclassname">pyansys.archive.</code><code class="sig-name descname">write_nblock</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">node_id</em>, <em class="sig-param">pos</em>, <em class="sig-param">angles=None</em>, <em class="sig-param">line_ending=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.archive.write_nblock" title="Permalink to this definition">¶</a></dt>
+<code class="sig-prename descclassname">pyansys.archive.</code><code class="sig-name descname">write_nblock</code><span class="sig-paren">(</span><em class="sig-param">filename</em>, <em class="sig-param">node_id</em>, <em class="sig-param">pos</em>, <em class="sig-param">angles=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.archive.write_nblock" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writes nodes and node angles to file.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
@@ -402,7 +401,6 @@ SOLID185).  Default True.</p></li>
 <li><p><strong>node_id</strong> (<em>np.ndarray</em>) – ANSYS node numbers.</p></li>
 <li><p><strong>pos</strong> (<em>np.ndarray</em>) – Node coordinates.</p></li>
 <li><p><strong>angles</strong> (<em>np.ndarray</em><em>, </em><em>optional</em>) – Writes the node angles for each node when included.</p></li>
-<li><p><strong>line_ending</strong> (<em>str</em><em>, </em><em>optional</em>) – Line ending.  Defaults to operating system line ending.</p></li>
 </ul>
 </dd>
 </dl>

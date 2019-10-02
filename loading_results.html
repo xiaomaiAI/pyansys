@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>Working with a ANSYS Result File (rst) &mdash; pyansys 0.39.2 documentation</title>
+  <title>Working with a ANSYS Result File (rst) &mdash; pyansys 0.39.3 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.39.2
+                0.39.3
               </div>
             
           
@@ -320,6 +320,46 @@ Z-axis radius to X-axis radius (defaults to 1.0 (circle)).</p>
 </div>
 <div class="section" id="accessing-solution-results">
 <h2>Accessing Solution Results<a class="headerlink" href="#accessing-solution-results" title="Permalink to this headline">¶</a></h2>
+<p>You can obtain detailed information using <code class="docutils literal notranslate"><span class="pre">solution_info</span></code> for each result:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># return a dictionary of solution info for the first result</span>
+<span class="n">info</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">solution_info</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">info</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">key</span><span class="p">,</span> <span class="n">info</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+</pre></div>
+</div>
+<p>This yields:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">timfrq</span> <span class="mf">1.0</span>
+<span class="n">lfacto</span> <span class="mf">1.0</span>
+<span class="n">lfactn</span> <span class="mf">1.0</span>
+<span class="n">cptime</span> <span class="mf">50.9189941460218</span>
+<span class="n">tref</span> <span class="mf">0.0</span>
+<span class="n">tunif</span> <span class="mf">0.0</span>
+<span class="n">tbulk</span> <span class="mf">82.0</span>
+<span class="n">volbase</span> <span class="mf">0.0</span>
+<span class="n">tstep</span> <span class="mf">0.0</span>
+<span class="n">__unused</span> <span class="mf">0.0</span>
+<span class="n">accel_x</span> <span class="mf">0.0</span>
+<span class="n">accel_y</span> <span class="mf">0.0</span>
+<span class="n">accel_z</span> <span class="mf">0.0</span>
+<span class="n">omega_v_x</span> <span class="mf">0.0</span>
+<span class="n">omega_v_y</span> <span class="mf">0.0</span>
+<span class="n">omega_v_z</span> <span class="mi">100</span>
+<span class="n">omega_a_x</span> <span class="mf">0.0</span>
+<span class="n">omega_a_y</span> <span class="mf">0.0</span>
+<span class="n">omega_a_z</span> <span class="mf">0.0</span>
+<span class="n">omegacg_v_x</span> <span class="mf">0.0</span>
+<span class="n">omegacg_v_y</span> <span class="mf">0.0</span>
+<span class="n">omegacg_v_z</span> <span class="mf">0.0</span>
+<span class="n">omegacg_a_x</span> <span class="mf">0.0</span>
+<span class="n">omegacg_a_y</span> <span class="mf">0.0</span>
+<span class="n">omegacg_a_z</span> <span class="mf">0.0</span>
+<span class="n">cgcent</span> <span class="mf">0.0</span>
+<span class="n">fatjack</span> <span class="mf">0.0</span>
+<span class="n">dval1</span> <span class="mf">0.0</span>
+<span class="n">pCnvVal</span> <span class="mf">0.0</span>
+</pre></div>
+</div>
 <p>The DOF solution for an analysis for each node in the analysis can be obtained using the code block below.  These results correspond to the node numbers in the result file.  This array is sized by the number of nodes by the number of degrees of freedom.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Return an array of results (nnod x dof)</span>
 <span class="n">nnum</span><span class="p">,</span> <span class="n">disp</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">nodal_solution</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># uses 0 based indexing</span>
@@ -633,12 +673,6 @@ position not used
 position not used</p>
 </dd>
 </dl>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyansys.rst.ResultFile.element_solution_header">
-<code class="sig-name descname">element_solution_header</code><span class="sig-paren">(</span><em class="sig-param">rnum</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.rst.ResultFile.element_solution_header" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get element solution header information</p>
 </dd></dl>
 
 <dl class="method">
@@ -1088,6 +1122,51 @@ writer.</p>
 <p>Binary files write much faster than ASCII, but binary files
 written on one system may not be readable on other systems.
 Binary can only be selected for the legacy writer.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyansys.rst.ResultFile.solution_info">
+<code class="sig-name descname">solution_info</code><span class="sig-paren">(</span><em class="sig-param">rnum</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.rst.ResultFile.solution_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return an informative dictionary of solution data for a
+result.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>header</strong> – Double precision solution header data.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The keys of the solution header is described below:</p>
+<dl class="simple">
+<dt>timfrq - Time value (or frequency value, for a modal or</dt><dd><p>harmonic analysis)</p>
+</dd>
+<dt>lfacto  - the “old” load factor (used in ramping a load</dt><dd><p>between old and new values)</p>
+</dd>
+</dl>
+<p>lfactn  - the “new” load factor
+cptime  - elapsed cpu time (in seconds)
+tref    - the reference temperature
+tunif   - the uniform temperature
+tbulk   - Bulk temp for FLOTRAN film coefs.
+VolBase - Initial total volume for VOF
+tstep   - Time Step size for FLOTRAN analysis
+0.0     - position not used
+accel   - linear acceleration terms
+omega   - angular velocity (first 3 terms) and angular acceleration (second 3 terms)
+omegacg - angular velocity (first 3 terms) and angular</p>
+<blockquote>
+<div><p>acceleration (second 3 terms) these velocity/acceleration
+terms are computed about the center of gravity</p>
+</div></blockquote>
+<p>cgcent  - (x,y,z) location of center of gravity
+fatjack - FATJACK ocean wave data (wave height and period)
+dval1   - if pmeth=0: FATJACK ocean wave direction</p>
+<blockquote>
+<div><p>if pmeth=1: p-method convergence values</p>
+</div></blockquote>
+<p>pCnvVal - p-method convergence values</p>
 </dd></dl>
 
 <dl class="method">

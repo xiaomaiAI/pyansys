@@ -839,6 +839,32 @@ X, Y, Z, XY, YZ, XZ, EQV, ESWELL</p></li>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyansys.rst.ResultFile.nodal_time_history">
+<code class="sig-name descname">nodal_time_history</code><span class="sig-paren">(</span><em class="sig-param">solution_type='NSL'</em>, <em class="sig-param">in_nodal_coord_sys=False</em><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.rst.ResultFile.nodal_time_history" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the DOF solution for each node in the global
+cartesian coordinate system or nodal coordinate system.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>solution_type</strong> (<em>str</em><em>, </em><em>optional</em>) – Specify, whether nodal displacements (‘NSL’), nodal
+velocities (‘VEL’) or nodal accelerations (‘ACC’) will be
+read.</p></li>
+<li><p><strong>in_nodal_coord_sys</strong> (<em>bool</em><em>, </em><em>optional</em>) – When True, returns results in the nodal coordinate system.
+Default False.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>nnum</strong> (<em>int np.ndarray</em>) – Node numbers associated with the results.</p></li>
+<li><p><strong>result</strong> (<em>float np.ndarray</em>) – Result is <code class="docutils literal notranslate"><span class="pre">self.nsets</span> <span class="pre">x</span> <span class="pre">nnod</span> <span class="pre">x</span> <span class="pre">Sumdof</span></code>, or number of time steps
+by number of nodes by degrees of freedom</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyansys.rst.ResultFile.node_components">
 <em class="property">property </em><code class="sig-name descname">node_components</code><a class="headerlink" href="#pyansys.rst.ResultFile.node_components" title="Permalink to this definition">¶</a></dt>
 <dd><p>dictionary of ansys node components</p>

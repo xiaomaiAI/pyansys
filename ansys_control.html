@@ -8,7 +8,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   
-  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.39.3 documentation</title>
+  <title>ANSYS APDL Interactive Control &mdash; pyansys 0.39.4 documentation</title>
   
 
   
@@ -61,7 +61,7 @@
             
             
               <div class="version">
-                0.39.3
+                0.39.4
               </div>
             
           
@@ -940,6 +940,25 @@ created/overwritten.</p>
 <dt id="pyansys.Mapdl.kill">
 <code class="sig-name descname">kill</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.Mapdl.kill" title="Permalink to this definition">¶</a></dt>
 <dd><p>Forces ANSYS process to end and removes lock file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyansys.Mapdl.load_parameters">
+<code class="sig-name descname">load_parameters</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyansys.Mapdl.load_parameters" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads and returns all current parameters</p>
+<p class="rubric">Examples</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">parameters</span><span class="p">,</span> <span class="n">arrays</span> <span class="o">=</span> <span class="n">mapdl</span><span class="o">.</span><span class="n">load_parameters</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+<span class="go">{&#39;ANSINTER_&#39;: 2.0,</span>
+<span class="go">&#39;CID&#39;: 3.0,</span>
+<span class="go">&#39;TID&#39;: 4.0,</span>
+<span class="go">&#39;_ASMDIAG&#39;: 5.363415510271,</span>
+<span class="go">&#39;_MAXELEMNUM&#39;: 26357.0,</span>
+<span class="go">&#39;_MAXELEMTYPE&#39;: 7.0,</span>
+<span class="go">&#39;_MAXNODENUM&#39;: 40908.0,</span>
+<span class="go">&#39;_MAXREALCONST&#39;: 1.0}</span>
+</pre></div>
+</div>
 </dd></dl>
 
 <dl class="method">

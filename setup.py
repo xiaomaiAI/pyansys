@@ -12,6 +12,25 @@ except:
     raise Exception('Please install numpy first with "pip install numpy"')
 
 
+def check_cython():
+    """Check if binaries exist and if not check if Cython is installed"""
+    path = os.path.dirname(__file__)
+    has_binary_reader = False
+    for filename in os.listdir('pyansys'):
+        if '_binary_reader' in filename:
+            has_binary_reader = True
+
+    if not has_binary_reader:
+        # ensure cython is installed before trying to build
+        try:
+            import cython
+        except ImportError:
+            raise ImportError('\n\n\nTo build pyansys please install Cython with:\n\n'
+                              'pip install cython\n\n') from None
+
+check_cython()
+
+
 class build_ext(_build_ext):
     """ build class that includes numpy directory """
     def finalize_options(self):
@@ -52,6 +71,8 @@ def compilerName():
 compiler = compilerName()
 if compiler == 'unix':
     cmp_arg = ['-O3', '-w']
+#    if sys.platform == 'darwin':
+#        cmp_arg.append('-flat_namespace')
 else:
     cmp_arg = ['/Ox', '-w']
 
@@ -91,10 +112,10 @@ setup(
         'Operating System :: Microsoft :: Windows',
         'Operating System :: POSIX',
         'Operating System :: MacOS',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
     ],
 
     # Website
@@ -102,25 +123,11 @@ setup(
 
     # Build cython modules
     cmdclass={'build_ext': build_ext},
-    ext_modules=[Extension("pyansys._parsefull",
-                           ['pyansys/cython/_parsefull.pyx',
-                            'pyansys/cython/parsefull.c'],
-                           extra_compile_args=cmp_arg,
-                           language='c'),
-
-                 Extension("pyansys._parser",
-                           ["pyansys/cython/_parser.pyx"],
-                           extra_compile_args=cmp_arg,
-                           language='c'),
-
-                 Extension("pyansys._db_reader",
-                           ["pyansys/cython/_db_reader.pyx"],
-                           extra_compile_args=cmp_arg,
-                           language='c'),
-
+    ext_modules=[
                  Extension('pyansys._reader',
                            ['pyansys/cython/_reader.pyx',
-                            'pyansys/cython/reader.c'],
+                            'pyansys/cython/reader.c',
+                            'pyansys/cython/vtk_support.c'],
                            extra_compile_args=cmp_arg,
                            language='c',),
 
@@ -130,19 +137,15 @@ setup(
                            language='c'),
 
                  Extension("pyansys._cellqual",
-                           ["pyansys/_cellqual.pyx"],
-                           extra_compile_args=cmp_arg,
-                           language='c'),
-
-                 Extension("pyansys._cellqualfloat",
-                           ["pyansys/cython/_cellqualfloat.pyx"],
+                           ["pyansys/cython/_cellqual.pyx"],
                            extra_compile_args=cmp_arg,
                            language='c'),
 
                  Extension("pyansys._binary_reader",
-                           ["pyansys/cython/_binary_reader.pyx"],
+                           ["pyansys/cython/_binary_reader.pyx",
+                            "pyansys/cython/binary_reader.cpp"],
                            extra_compile_args=cmp_arg,
-                           language='c'),
+                           language='c++'),
                  ],
 
     keywords='vtk ANSYS cdb full rst',
@@ -156,9 +159,10 @@ setup(
                                        'sector.cdb']},
 
     install_requires=['numpy>=1.14.0',
-                      'pyvista>=0.21.0',
+                      'pyvista>=0.25.0',
                       'ansys_corba',
                       'appdirs',
                       'psutil>=5.0.0',
-                      'pexpect']
+                      'pexpect',
+    ]
 )

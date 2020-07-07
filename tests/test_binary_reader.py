@@ -1,40 +1,99 @@
+import shutil
 import os
 
 import pytest
-try:
-    from pyvista.plotting import running_xserver as system_supports_plotting
-except:
-    from pyvista.plotting import system_supports_plotting
+from pyvista.plotting import system_supports_plotting
 
 import numpy as np
 import pyvista as pv
 
 import pyansys
 from pyansys import examples
+from pyansys._rst_keys import element_index_table_info
+
+
+HAS_FFMPEG = True
+try:
+    import imageio_ffmpeg
+except ImportError:
+    HAS_FFMPEG = False
+
 
 try:
     __file__
 except:
     __file__ = '/home/alex/afrl/python/source/pyansys/tests/test_binary_reader.py'
 
+
 test_path = os.path.dirname(os.path.abspath(__file__))
 testfiles_path = os.path.join(test_path, 'testfiles')
 
+@pytest.fixture(scope='module')
+def result():
+    return pyansys.read_binary(examples.rstfile)
 
-def test_save_as_vtk(tmpdir):
+
+def test_loadresult(result):
+    # check result is loaded
+    assert result.nsets
+    assert result.geometry.nnum.size
+
+    # check geometry is genreated
+    grid = result.grid
+    assert grid.points.size
+    assert grid.cells.size
+    assert 'ansys_node_num' in grid.point_arrays
+
+    # check results can be loaded
+    nnum, disp = result.nodal_solution(0)
+    assert nnum.size
+    assert disp.size
+
+    nnum, disp = result.nodal_solution(0)
+    assert nnum.size
+    assert disp.size
+
+    nnum, disp = result.principal_nodal_stress(0)
+    assert nnum.size
+    assert disp.size
+
+    nnum, disp = result.nodal_stress(0)
+    assert nnum.size
+    assert disp.size
+
+    element_stress, enum, enode = result.element_stress(0)
+    assert element_stress[0].size
+    assert enum.size
+    assert enode[0].size
+
+    element_stress, enum, enode = result.element_stress(0, principal=True)
+    assert element_stress[0].size
+    assert enum.size
+    assert enode[0].size
+
+
+
+result_types = ['ENS', 'EPT', 'ETH', 'EEL', 'ENG']# 'ENF']
+@pytest.mark.parametrize("result_type", result_types)
+def test_save_as_vtk(tmpdir, result, result_type):
     filename = str(tmpdir.mkdir("tmpdir").join('tmp.vtk'))
-    result = pyansys.read_binary(examples.rstfile)
-    result.save_as_vtk(filename)
+    result.save_as_vtk(filename, result_types=[result_type])
 
     grid = pv.UnstructuredGrid(filename)
     for i in range(result.nsets):
-        assert 'nodal_solution%03d' % i in grid.point_arrays
-        arr = grid.point_arrays['nodal_solution%03d' % i]
+        key = 'Nodal Solution %d' % i
+        assert key in grid.point_arrays
+        arr = grid.point_arrays[key]
         assert np.allclose(arr, result.nodal_solution(i)[1], atol=1E-5)
+        # breakpoint()
 
-        assert 'nodal_stress%03d' % i in grid.point_arrays
-        arr = grid.point_arrays['nodal_stress%03d' % i]
-        assert np.allclose(arr, result.nodal_stress(i)[1], atol=1E-5, equal_nan=True)
+        key = '%s %d' % (element_index_table_info[result_type], i)
+        assert key in grid.point_arrays
+        arr = grid.point_arrays[key]
+        _, rst_arr = result._nodal_result(i, result_type)
+        if rst_arr.shape[1] == 1:
+            rst_arr = rst_arr.ravel()
+        assert np.allclose(arr, rst_arr, atol=1E-5, equal_nan=True)
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
@@ -50,7 +109,7 @@ def test_plot_component():
 
     ansys.Nsel('S', 'NODE', '', 1, 40)
     ansys.Cm('MY_OTHER_COMPONENT', 'NODE')
-    
+
     ansys.Allsel()
 
     # Aluminum properties (or something)
@@ -82,3 +141,25 @@ def test_plot_component():
                                        node_components=components, off_screen=True)
 
 
+def test_file_close(tmpdir):
+    tmpfile = str(tmpdir.mkdir("tmpdir").join('tmp.vtk'))
+    shutil.copy(examples.rstfile, tmpfile)
+    rst = pyansys.read_binary(tmpfile)
+    nnum, stress = rst.nodal_stress(0)
+    os.remove(tmpfile)
+
+
+@pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
+@pytest.mark.skipif(not HAS_FFMPEG, reason="requires imageio_ffmpeg")
+def test_animate_nodal_solution(tmpdir, result):
+    temp_movie = str(tmpdir.mkdir("tmpdir").join('tmp.mp4'))
+    result.animate_nodal_solution(0, nangles=20, movie_filename=temp_movie,
+                                  loop=False, off_screen=True)
+    assert np.any(result.grid.points)
+    assert os.path.isfile(temp_movie)
+
+
+def test_loadbeam():
+    linkresult_path = os.path.join(testfiles_path, 'link1.rst')
+    linkresult = pyansys.read_binary(linkresult_path)
+    assert np.any(linkresult.grid.cells)

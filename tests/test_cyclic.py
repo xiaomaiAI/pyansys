@@ -4,6 +4,7 @@ import os
 import numpy as np
 import pytest
 from pyvista.plotting import system_supports_plotting
+from pyvista.plotting.renderer import CameraPosition
 
 import pyansys
 from pyansys.examples import rstfile
@@ -29,20 +30,30 @@ cyclic_testfiles_path = os.path.join(path, 'cyclic_reader')
 # modal result z axis
 try:
     result_z = pyansys.download_sector_modal()
+    result_z.positive_cyclic_dir = True
 except:
     result_z = None
 
+
 # static result x axis
-cyclic_x_filename = os.path.join(testfiles_path, 'cyc12.rst')
-result_x = pyansys.read_binary(cyclic_x_filename)
+@pytest.fixture(scope='module')
+def result_x():
+    filename = os.path.join(testfiles_path, 'cyc12.rst')
+    return pyansys.read_binary(filename)
 
-# static result z axis
-cyclic_v182_file = os.path.join(cyclic_testfiles_path, 'cyclic_v182.rst')
-cyclic_v182_z = pyansys.read_binary(cyclic_v182_file)
 
-# cyclic modal with component
-filename = os.path.join(cyclic_testfiles_path, 'cyclic_v182_w_comp.rst')
-cyclic_v182_z_with_comp = pyansys.read_binary(filename)
+@pytest.fixture(scope='module')
+def cyclic_v182_z():
+    # static result z axis
+    filename = os.path.join(cyclic_testfiles_path, 'cyclic_v182.rst')
+    return pyansys.read_binary(filename)
+
+
+@pytest.fixture(scope='module')
+def cyclic_v182_z_with_comp():
+    # cyclic modal with component
+    filename = os.path.join(cyclic_testfiles_path, 'cyclic_v182_w_comp.rst')
+    return pyansys.read_binary(filename)
 
 
 def test_non_cyclic():
@@ -54,24 +65,25 @@ def test_non_cyclic():
 @pytest.mark.skipif(result_z is None, reason="Requires result file")
 def test_plot_z_cyc():
     cpos = result_z.plot(off_screen=True)
-    assert isinstance(cpos, list)
+    assert isinstance(cpos, CameraPosition)
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_plot_x_cyc():
+def test_plot_x_cyc(result_x):
     cpos = result_x.plot(off_screen=True)
-    assert isinstance(cpos, list)
+    assert isinstance(cpos, CameraPosition)
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_plot_component_rotor():
+def test_plot_component_rotor(cyclic_v182_z_with_comp):
     cyclic_v182_z_with_comp.plot_nodal_solution(0, full_rotor=False,
-                                 node_components='REFINE', sel_type_all=False,
-                                 off_screen=True)
+                                                node_components='REFINE',
+                                                sel_type_all=False,
+                                                off_screen=True)
 
     cyclic_v182_z_with_comp.plot_nodal_solution(0, full_rotor=True,
-                                 node_components='REFINE', sel_type_all=False,
-                                 off_screen=True)
+                                                node_components='REFINE',
+                                                sel_type_all=False, off_screen=True)
 
     # result_z.plot_nodal_stress(20, 'Sx', node_components='REFINE',
     #                            sel_type_all=False, off_screen=True)
@@ -104,15 +116,16 @@ def test_element_stress_v182_non_cyclic():
     ansys_result_file = os.path.join(cyclic_testfiles_path, 'cyclic_v182.rst')
     result = pyansys.read_binary(ansys_result_file)
 
-    element_stress, elemnum, enode = result.element_stress(0)
+    element_stress, elemnum, enode = result.element_stress(0, False, False)
+    assert np.allclose(np.sort(elemnum), elemnum), 'elemnum must be sorted'
+
     element_stress = np.vstack(element_stress)
     enode = np.hstack(enode)
 
-
     # cyclic model will only output the master sector
     from_ansys = np.load(os.path.join(cyclic_testfiles_path, 'v182_presol.npz'))
-    assert np.allclose(from_ansys['element_stress'], element_stress)
     assert np.allclose(from_ansys['enode'], enode)
+    assert np.allclose(from_ansys['element_stress'], element_stress)
 
 
 def test_nodal_stress_v182_non_cyclic():
@@ -132,7 +145,7 @@ def test_nodal_stress_v182_non_cyclic():
     assert np.allclose(from_ansys['stress'][:nnum.size], stress)
 
 
-def test_full_x_nodal_solution():
+def test_full_x_nodal_solution(result_x):
     """ need to open gui to output full rotor results """
     from_ansys = np.load(os.path.join(cyclic_testfiles_path,
                                       'prnsol_d_cyclic_x_full_v182.npz'))
@@ -149,6 +162,8 @@ def test_full_x_nodal_solution():
                                          as_complex=False,
                                          in_nodal_coord_sys=False)
 
+    assert np.allclose(np.sort(nnum), nnum), 'nnum must be sorted'
+
     mask = np.in1d(nnum, ansys_nnum)
     n = mask.sum()
     tmp = ansys_disp.reshape(disp.shape[0], n, 3)
@@ -156,7 +171,7 @@ def test_full_x_nodal_solution():
     assert np.allclose(disp[:, mask], tmp)
 
 
-def test_full_z_nodal_solution():
+def test_full_z_nodal_solution(cyclic_v182_z):
     """ need to open gui to output full rotor results """
     from_ansys = np.load(os.path.join(cyclic_testfiles_path,
                                       'prnsol_d_cyclic_z_full_v182.npz'))
@@ -166,21 +181,23 @@ def test_full_z_nodal_solution():
 
     rnum = 0
     phase = 0
-    nnum, disp = cyclic_v182_z.nodal_solution(rnum, phase, full_rotor=True,
-                                         as_complex=False,
-                                         in_nodal_coord_sys=False)
+    nnum, disp = cyclic_v182_z.nodal_solution(rnum, phase,
+                                              full_rotor=True,
+                                              as_complex=False,
+                                              in_nodal_coord_sys=False)
 
     mask = np.in1d(nnum, ansys_nnum)
     n = mask.sum()
     tmp = ansys_disp.reshape(disp.shape[0], n, 3)
     assert np.allclose(disp[:, mask], tmp)
 
+
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_full_x_nodal_solution_plot():
+def test_full_x_nodal_solution_plot(result_x):
     result_x.plot_nodal_solution(0, off_screen=True)
 
 
-def test_full_x_nodal_stress():
+def test_full_x_nodal_stress(result_x):
     """ need to open gui to output full rotor results """
     from_ansys = np.load(os.path.join(cyclic_testfiles_path,
                                       'prnsol_s_cyclic_x_full_v182.npz'))
@@ -196,17 +213,20 @@ def test_full_x_nodal_stress():
     tmp = ansys_stress.reshape(stress.shape[0], n, 6)
 
     np.abs(stress[:, mask] - tmp)
-    assert np.allclose(stress[:, mask], tmp, atol=1E-5)
+
+    assert np.allclose(stress[:, mask], tmp)
     assert np.allclose(nnum[mask], ansys_nnum[:n])
 
 
-def test_mode_table():
+def test_mode_table(cyclic_v182_z, result_x):
     assert isinstance(cyclic_v182_z.mode_table, np.ndarray)
     assert isinstance(result_x.mode_table, np.ndarray)
+
 
 @pytest.mark.skipif(result_z is None, reason="Requires result file")
 def test_mode_table_result_z():
     assert isinstance(result_z.mode_table, np.ndarray)
+
 
 @pytest.mark.skipif(result_z is None, reason="Requires result file")
 def test_harmonic_index_to_cumulative():
@@ -222,7 +242,7 @@ def test_harmonic_index_to_cumulative():
         result_z.harmonic_index_to_cumulative(0, 6)
 
 
-def test_full_x_principal_nodal_stress():
+def test_full_x_principal_nodal_stress(result_x):
     """ need to open gui to output full rotor results """
     from_ansys = np.load(os.path.join(cyclic_testfiles_path,
                                       'prnsol_p_cyclic_x_full_v182.npz'))
@@ -238,7 +258,7 @@ def test_full_x_principal_nodal_stress():
     tmp = ansys_stress.reshape(stress.shape[0], n, 5)
 
     assert np.allclose(nnum[mask], ansys_nnum[:n])
-    assert np.allclose(stress[:, mask], tmp, atol=4E-3)  # loose due to text printing
+    assert np.allclose(stress[:, mask], tmp, atol=4E-3)  # too loose
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
@@ -247,7 +267,7 @@ def test_full_x_principal_nodal_stress():
 def test_animate_nodal_solution(tmpdir):
     temp_movie = str(tmpdir.mkdir("tmpdir").join('tmp.mp4'))
     result_z.animate_nodal_solution(0, nangles=20, movie_filename=temp_movie,
-                                    off_screen=True)
+                                    off_screen=True, loop=False)
     assert os.path.isfile(temp_movie)
 
 
@@ -267,43 +287,26 @@ def test_cyclic_z_harmonic_displacement():
 
     nnum, disp = result_z.nodal_solution((4, 2), full_rotor=True)
     mask = np.in1d(nnum, ansys_nnum)
-    n = mask.sum()
-    tmp = ansys_disp.reshape(disp.shape[0], n, 3)
+    tmp = ansys_disp.reshape(disp.shape[0], mask.sum(), 3)
+
     assert np.allclose(disp[:, mask], tmp, atol=1E-5)
 
 
-def plot_nodal_solution_z_harmonic():
-    result.plot_nodal_solution((4, 2), 'z', show_axes=True, off_screen=True)
-
-
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_plot_nodal_stress():
+def test_plot_nodal_stress(result_x):
     result_x.plot_nodal_stress(0, 'z', off_screen=True)
+    result_x.plot_nodal_stress(0, 'z', off_screen=False)
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_plot_nodal_stress():
+def test_plot_nodal_stress(result_x):
     result_x.plot_nodal_stress(0, 'z', off_screen=True, full_rotor=False)
 
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
-def test_plot_principal_nodal_stress():
+def test_plot_principal_nodal_stress(result_x):
     result_x.plot_principal_nodal_stress(0, 'eqv', off_screen=True)
-
-
-# result_x.plot_nodal_stress(0, 'sz', full_rotor=False)
-
-# result_z.plot_principal_nodal_stress(0, 'seqv')
-# result_z.plot_nodal_stress(0, 'sx')
-
-
-
-# arr = np.loadtxt('/tmp/ansys/text.txt', skiprows=2)
-# np.savez(os.path.join(cyclic_testfiles_path,
-#                       'prnsol_s_cyclic_z_full_v182_set_1_1.npz'),
-#          nnum=arr[:, 0].astype(np.int),
-#          stress=arr[:, 1:])
 
 
 # def test_full_z_nodal_stress():
@@ -327,3 +330,7 @@ def test_plot_principal_nodal_stress():
 #     n = mask.sum()
 #     tmp = ansys_stress.reshape(stress.shape[0], n, ansys_stress.shape[1])
 #     assert np.allclose(stress[:, mask], tmp, atol=1E-5)
+
+
+# if __name__ == '__main__':
+#     test_element_stress_v182_non_cyclic()

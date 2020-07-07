@@ -1,7 +1,6 @@
 """pyansys examples
 
 """
-from __future__ import print_function
 import os
 import inspect
 import sys
@@ -43,28 +42,25 @@ def run_all(run_ansys=False):
 
 
 def show_hex_archive(off_screen=None):
-    """ Displays a hex beam mesh """
+    """Displays a hex beam mesh"""
     # Load an archive file
     archive = pyansys.Archive(hexarchivefile)
-    grid = archive.parse_vtk()
-    grid.plot(off_screen=off_screen, color='w', show_edges=True)
-    assert grid.n_points
-    assert grid.n_cells
+    archive.plot(off_screen=off_screen, color='w', show_edges=True)
+    assert archive.grid.n_points
+    assert archive.grid.n_cells
 
 
 def load_result():
-    """
-    Loads a result file and prints out the displacement of all the nodes from
+    """Loads a result file and prints out the displacement of all the nodes from
     a modal analysis.
-
     """
 
     # Load result file
     result = pyansys.read_binary(rstfile)
     assert result.nsets == 6
-    assert len(result.nnum) == 321
+    assert len(result.geometry.nnum) == 321
     print('Loaded result file with {:d} result sets'.format(result.nsets))
-    print('Contains {:d} nodes'.format(len(result.nnum)))
+    print('Contains {:d} nodes'.format(len(result.geometry.nnum)))
 
     # display result
     nnum, disp = result.nodal_solution(0)
@@ -72,7 +68,7 @@ def load_result():
     print('Nodal displacement for nodes 30 to 40 is:')
 
     for i in range(29, 40):
-        node = result.nnum[i]
+        node = result.geometry.nnum[i]
         x = disp[i, 0]
         y = disp[i, 1]
         z = disp[i, 2]
@@ -134,24 +130,21 @@ def load_km():
     for i in range(4):
         print('{:.3f} Hz'.format(freq[i]))
 
-    known_result = np.array([ 1283.20036921, 1283.20036921,
-                              5781.97486169, 6919.39887714,
-                              6919.39887714, 10172.61497694,
-                              16497.85701889, 16497.85701889,
-                              17343.9939669 , 27457.18472747,
-                              27457.18472747, 28908.52552073,
-                              30326.16886062, 39175.76412419,
-                              39175.76412419, 40503.70406456,
-                              49819.91597612, 51043.03965541,
-                              51043.03965541, 52193.86143879])
-
+    known_result = np.array([1283.20036921, 1283.20036921,
+                             5781.97486169, 6919.39887714,
+                             6919.39887714, 10172.61497694,
+                             16497.85701889, 16497.85701889,
+                             17343.9939669 , 27457.18472747,
+                             27457.18472747, 28908.52552073,
+                             30326.16886062, 39175.76412419,
+                             39175.76412419, 40503.70406456,
+                             49819.91597612, 51043.03965541,
+                             51043.03965541, 52193.86143879])
     assert np.allclose(freq, known_result)
 
 
 def solve_km():
-    """
-    Loads and solves a mass and stiffness matrix from an ansys full file
-    """
+    """Load and solves a mass and stiffness matrix from an ansys full file"""
     try:
         from scipy.sparse import linalg
         from scipy import sparse
@@ -178,7 +171,7 @@ def solve_km():
 
     # Get the 4th mode shape
     full_mode_shape = v[:, 3]  # x, y, z displacement for each node
-    
+
     # reshape and compute the normalized displacement
     disp = full_mode_shape.reshape((-1, 3))
     n = (disp * disp).sum(1)**0.5
@@ -186,20 +179,20 @@ def solve_km():
 
     # load an archive file and create a vtk unstructured grid
     archive = pyansys.Archive(pyansys.examples.hexarchivefile)
-    grid = archive.parse_vtk()
+    grid = archive.grid
 
     # Fancy plot the displacement
-    plobj = pv.Plotter()
+    pl = pv.Plotter()
 
     # add two meshes to the plotting class
-    plobj.add_mesh(grid.copy(), color='w', style='wireframe')
-    plobj.add_mesh(grid, scalars=n, stitle='Normalized\nDisplacement',
-                   flip_scalars=True, cmap='jet')
+    pl.add_mesh(grid.copy(), color='w', style='wireframe')
+    pl.add_mesh(grid, scalars=n, stitle='Normalized\nDisplacement',
+                flip_scalars=True, cmap='jet')
     # Update the coordinates by adding the mode shape to the grid
-    plobj.update_coordinates(grid.points + disp / 80, render=False)
-    plobj.add_text('Cantliver Beam 4th\nMode Shape at\n{:.4f}'.format(f[3]),
-                  font_size=30)
-    plobj.plot()
+    pl.update_coordinates(grid.points + disp / 80, render=False)
+    pl.add_text('Cantliver Beam 4th\nMode Shape at\n{:.4f}'.format(f[3]),
+                font_size=30)
+    pl.plot()
 
 
 def show_cell_qual(meshtype='tet', off_screen=None):
@@ -221,17 +214,14 @@ def show_cell_qual(meshtype='tet', off_screen=None):
     else:
         archive = pyansys.Archive(tetarchivefile)
 
-    # create vtk object
-    grid = archive.parse_vtk()
-
     # get cell quality
-    qual = pyansys.CellQuality(grid)
+    qual = archive.quality
     assert np.all(qual > 0)
 
     # plot cell quality
-    grid.plot(scalars=qual, stitle='Cell Minimum Scaled\nJacobian', cmap='bwr',
-              show_edges=True,
-              rng=[0, 1], flip_scalars=True, off_screen=off_screen)
+    archive.grid.plot(scalars=qual, stitle='Cell Minimum Scaled\nJacobian',
+                      cmap='bwr', show_edges=True, rng=[0, 1],
+                      off_screen=off_screen)
 
 
 def ansys_cylinder_demo(exec_file=None, plot_vtk=True,
@@ -253,7 +243,7 @@ def ansys_cylinder_demo(exec_file=None, plot_vtk=True,
         loglevel = 'ERROR'
     else:
         loglevel = 'INFO'
-    ansys = pyansys.Mapdl(exec_file=exec_file, override=True, loglevel=loglevel)
+    ansys = pyansys.launch_mapdl(exec_file=exec_file, override=True, loglevel=loglevel)
 
     # Define higher-order SOLID186
     # Define surface effect elements SURF154 to apply torque

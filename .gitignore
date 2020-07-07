@@ -2,8 +2,8 @@
 ###################
 *.pyc
 *.pyd
-*.c
-*.cpp
+_*.c
+_*.cpp
 *.so
 *.o
 *.cache
@@ -19,12 +19,14 @@
 pyansys.egg-info/
 build/
 dist/
+wheelhouse
+.eggs
 
 # MISC
 _build/
 pyansys/Interface.py
 *.bat
-docs/examples/*
+run_tests.sh
 
 # Testing
 factory/
@@ -38,3 +40,12 @@ tests/htmlcov
 tests/cyclic/htmlcov
 .coverage
 *,cover
+flycheck*
+test-output.xml
+
+# ignore certain result files
+tests/testfiles/is16.rst
+
+# docs
+docs/examples/*
+docs/images/auto-generated/*

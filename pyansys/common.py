@@ -5,20 +5,22 @@ https://www.sharcnet.ca/Software/Ansys/16.2.3/en-us/help/ans_prog/Hlp_P_INT1_1.h
 """
 import struct
 import os
+from collections import Counter
 
 import numpy as np
+import pyvista as pv
 
+from pyansys._binary_reader import c_read_record
 from pyansys import _binary_reader
 
-
-ANSYS_BINARY_FILE_TYPES = {2: 'Element matrix file',
-                           3: None,
+ANSYS_BINARY_FILE_TYPES = {2: 'Element Matrix File',
+                           3: 'Element Save Data file',
                            4: 'Full stiffness-mass matrix File',
                            8: 'Substructure Matrices File',
                            9: 'Modal Results File',
                            10: 'Reduced Displacement File',
-                           12: 'Result file',
-                           16: 'Database file',
+                           12: 'Result File',
+                           16: 'Database File',
                            45: 'Component Mode Synthesis Matrices (CMS) File'}
 
 
@@ -39,7 +41,7 @@ ANSYS_BINARY_FILE_TYPES = {2: 'Element matrix file',
 # c     TRI  ->    TRINM        FUN11        3      tri stiffness
 # c     RST  ->    RSTNM        FUN12        6      results
 # c     DSUB ->    DSUBNM       FUN13        5      displacement substructure
-# c                             FUN14               input file? 
+# c                             FUN14               input file?
 # c                             FUN15               output file?
 # c     RDB  ->                 FUN16               back up file
 # c                             FUN17               temporary file (used in different cases)
@@ -59,9 +61,42 @@ ANSYS_BINARY_FILE_TYPES = {2: 'Element matrix file',
 # c     ASI  ->    ASIRSTNM     FUN66        9      asi results
 
 
+class AnsysBinary():
+    """ANSYS binary file class"""
+    filename = None
+
+    def read_record(self, pointer, return_bufsize=False):
+        """Reads a record at a given position.
+
+        Because ANSYS 19.0+ uses compression by default, you must use
+        this method rather than ``np.fromfile``.
+
+        Parameters
+        ----------
+        pointer : int
+            ANSYS file position (n words from start of file.  A word
+            is four bytes.
+
+        return_bufsize : bool, optional
+            Returns the number of words read (includes header and
+            footer).  Useful for determining the new position in the
+            file after reading a record.
+
+        Returns
+        -------
+        record : np.ndarray
+            The record read as a ``n x 1`` numpy array.
+
+        bufsize : float, optional
+            When ``return_bufsize`` is enabled, returns the number of
+            words read.
+
+        """
+        return c_read_record(self.filename, pointer, return_bufsize)
+
+
 def read_binary(filename, **kwargs):
-    """
-    Reads ANSYS-written binary files:
+    """Reads ANSYS-written binary files:
     - Jobname.RST: result file from structural analysis
     - Jobname.EMAT: Stores data related to element matrices
     - Jobname.FULL Stores the full stiffness-mass matrix
@@ -94,8 +129,7 @@ def read_binary(filename, **kwargs):
     - Jobname.MODE file, storing data related to a modal analysis
     - Jobname.RMG A magnetic analysis
     - Jobname.RFL A FLOTRAN analysis (a legacy results file)
-    - Jobname.RTH A thermal analysis    
-
+    - Jobname.RTH A thermal analysis
     """
     if not os.path.isfile(filename):
         raise FileNotFoundError('%s is not a file or cannot be found' %
@@ -112,7 +146,8 @@ def read_binary(filename, **kwargs):
         return FullFile(filename, **kwargs)
     elif file_format == 12:
         from pyansys.rst import ResultFile
-        result = ResultFile(filename, **kwargs)
+        read_geometry = kwargs.pop('read_geometry', True)
+        result = ResultFile(filename, read_geometry=False, **kwargs)
 
         # check if it's a cyclic result file
         ignore_cyclic = kwargs.pop('ignore_cyclic', False)
@@ -120,34 +155,53 @@ def read_binary(filename, **kwargs):
             from pyansys.cyclic_reader import CyclicResult
             return CyclicResult(filename)
 
+        if read_geometry:
+            result._store_geometry()
+
         return result
 
-    elif file_format == 16:
-        from pyansys.db import Database
-        return Database(filename, debug=kwargs.pop('debug', False))
+    # elif file_format == 16:
+    #     from pyansys.db import Database
+    #     return Database(filename, debug=kwargs.pop('debug', False))
 
-    else:
-        if file_format in ANSYS_BINARY_FILE_TYPES:
-            file_type = ANSYS_BINARY_FILE_TYPES[file_format]
-        else:
-            file_type = str(file_format)
-        raise RuntimeError('ANSYS binary "%s" not supported' % file_type)
+    # No file matches
+    file_type = ANSYS_BINARY_FILE_TYPES.get(file_format, str(file_format))
+    raise RuntimeError('ANSYS binary "%s" not supported' % file_type)
 
 
-def read_table(f, dtype='i', nread=None, skip=False, get_nread=True):
+def read_table(f, dtype='i', nread=None, skip=False, get_nread=True, cython=False):
     """ read fortran style table """
+    if cython:
+        arr, bufsz = c_read_record(f.name, f.tell()//4, True)
+        f.seek(bufsz*4, 1)
+        return arr
+
     if get_nread:
         n = np.fromfile(f, 'i', 1)
         if not n:
             raise Exception('end of file')
 
         tablesize = n[0]
-        if dtype is None:
-            ansys_dtype = np.fromfile(f, 'i', 1)
-            if ansys_dtype == 0:
-                dtype = 'double'
+        if dtype is None:  # read flags to get data type
+            # ansys_dtype = np.fromfile(f, 'i', 1)
+            flags = f.read(4)[-1]
+            type_flag = flags >> 0 & 1
+            prec_flag = flags >> 1 & 1
+            # zlib_flag = flags >> 2 & 1
+            sparse_flag = flags >> 3 & 1
+            if sparse_flag:
+                raise NotImplementedError('Cannot read sparse results.\nPlease run with "/FCOMP,RST,0" to disable writing sparse results')
+
+            if type_flag:
+                if prec_flag:
+                    dtype = 'short'
+                else:
+                    dtype = 'i'
             else:
-                dtype = 'i'
+                if prec_flag:
+                    dtype = 'float'
+                else:
+                    dtype = 'double'
         else:
             f.seek(4, 1)  # skip padding
 
@@ -164,7 +218,6 @@ def read_table(f, dtype='i', nread=None, skip=False, get_nread=True):
         table = np.fromfile(f, dtype, tablesize)
     f.seek(4, 1)  # skip padding
     return table
-
 
 
 def read_string_from_binary(f, n):
@@ -185,11 +238,24 @@ def parse_header(table, keys):
     """ parses a header from a table """
     header = {}
     max_entry = len(table) - 1
+    # some keys occure multiple times and refer to arrays of some sort
+    counter = Counter(keys)
+    del counter['0']
+
+    # initialize lists/arrays
+    for key, count in counter.items():
+        if count > 1:
+            header[key] = []
+
     for i, key in enumerate(keys):
         if i > max_entry:
             header[key] = 0
         else:
-            header[key] = table[i]
+            if counter[key]>1:  # multiple items in the header -> list/array
+                if table[i]:  # skip zeros
+                    header[key].append(table[i])
+            else:
+                header[key] = table[i] 
 
     for key in keys:
         if 'ptr' in key and key[-1] == 'h':
@@ -314,9 +380,36 @@ def midside_mask(grid):
     -------
     mask : bool np.ndarray
         True when a midside node.
-
     """
     return _binary_reader.midside_mask(grid.celltypes,
-                                   grid.cells,
-                                   grid.offset,
-                                   grid.number_of_points)
+                                       grid.cells,
+                                       grid.offset,
+                                       grid.number_of_points)
+
+
+def rotate_to_global(result, euler_angles):
+    """Rotate a result set to the global coordinate system
+
+    ANSYS writes the results in the nodal coordinate system and
+    they use the ZXY euler rotation method.
+
+    Rotates results in-place.
+
+    Parameters
+    ----------
+    result : np.ndarray
+        Nodal result set to rotate.  Sized ``n_node`` x ``ndof``
+
+    euler_angles : np.ndarray
+        Array of euler angles sized 3 x ``n_node`` in degrees.
+
+    """
+    theta_xy, theta_yz, theta_zx = euler_angles
+    if np.any(theta_xy):
+        pv.common.axis_rotation(result, theta_xy, inplace=True, axis='z')
+
+    if np.any(theta_yz):
+        pv.common.axis_rotation(result, theta_yz, inplace=True, axis='x')
+
+    if np.any(theta_zx):
+        pv.common.axis_rotation(result, theta_zx, inplace=True, axis='y')

@@ -5,6 +5,12 @@ import pyansys
 from pyansys import examples
 from pyvista.plotting import system_supports_plotting
 
+HAS_IMAGEIO = True
+try:
+    import imageio_ffmpeg
+except ImportError:
+    HAS_IMAGEIO = False
+
 try:
     shaft = pyansys.download_shaft_modal()
 except:
@@ -56,12 +62,20 @@ def test_cylinderansys_150():
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")
 @pytest.mark.skipif(shaft is None, reason="Requires example file")
+@pytest.mark.skipif(not HAS_IMAGEIO, reason='Requires imageio_ffmpeg')
 def test_shaft_animate(tmpdir):
     filename = str(tmpdir.mkdir("tmpdir").join('tmp.mp4'))
-    shaft.animate_nodal_solution(5, node_components='SHAFT_MESH',
-                                 max_disp=10, comp='norm',
-                                 show_edges=True, off_screen=True,
+    shaft.animate_nodal_solution(5, element_components='SHAFT_MESH',
+                                 max_disp=10, comp='norm', loop=False,
+                                 nangles=10, show_edges=True,
+                                 off_screen=True,
                                  movie_filename=filename)
+
+@pytest.mark.skipif(shaft is None, reason="Requires example file")
+def test_shaft_nodal_solution_ncomp(tmpdir):
+    filename = str(tmpdir.mkdir("tmpdir").join('tmp.mp4'))
+    shaft.plot_nodal_solution(5, node_components='N_AREA_BC1', sel_type_all=False,
+                              off_screen=True)
 
 
 @pytest.mark.skipif(not system_supports_plotting(), reason="Requires active X Server")

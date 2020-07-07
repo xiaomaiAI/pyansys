@@ -1,6 +1,4 @@
-"""Supports reading cyclic strucutral result files from ANSYS
-
-"""
+"""Supports reading cyclic structural result files from ANSYS"""
 import logging
 
 import vtk
@@ -9,8 +7,7 @@ from pyvista.core.common import axis_rotation
 import pyvista as pv
 
 from pyansys.rst import ResultFile, trans_to_matrix
-from pyansys import (_parsefull, _binary_reader, _parser)
-from pyansys._binary_reader import cells_with_any_nodes, cells_with_all_nodes
+from pyansys import _binary_reader
 
 
 # Create logger
@@ -21,17 +18,30 @@ np.seterr(divide='ignore', invalid='ignore')
 
 
 class CyclicResult(ResultFile):
-    """ Adds cyclic functionality to the result reader in pyansys """
+    """Adds cyclic functionality to the result class"""
 
     def __init__(self, filename):
         """ Initializes object """
         super(CyclicResult, self).__init__(filename)
 
         # sanity check
-        if self.header['nSector'] == 1:
-            raise Exception('Result is not a cyclic model')
+        if self.n_sector == 1:
+            raise RuntimeError('Result is not a cyclic model')
 
+        self._animating = False
         self._add_cyclic_properties()
+        self._positive_cyclic_dir = False
+
+    @property
+    def positive_cyclic_dir(self):
+        """Rotor results are default anit-clockwise.  Set this to
+        `True` if cyclic results to not look correct.
+        """
+        return self._positive_cyclic_dir
+
+    @positive_cyclic_dir.setter
+    def positive_cyclic_dir(self, value):
+        self._positive_cyclic_dir = bool(value)
 
     def plot(self, color='w', show_edges=True, **kwargs):
         """Plot the full rotor geometry.
@@ -41,10 +51,11 @@ class CyclicResult(ResultFile):
         color : string or 3 item list, optional, defaults to white
             Either a string, rgb list, or hex color string.  For
             example:
-                ``color='white'``
-                ``color='w'``
-                ``color=[1, 1, 1]``
-                ``color='#FFFFFF'``
+
+            - ``color='white'``
+            - ``color='w'``
+            - ``color=[1, 1, 1]``
+            - ``color='#FFFFFF'``
 
             Color will be overridden when scalars are input.
 
@@ -55,11 +66,12 @@ class CyclicResult(ResultFile):
         style : string, optional
             Visualization style of the vtk mesh.  One for the
             following:
-                ``style='surface'``
-                ``style='wireframe'``
-                ``style='points'``
 
-            Defaults to 'surface'
+            - ``style='surface'``
+            - ``style='wireframe'``
+            - ``style='points'``
+
+            Defaults to ``'surface'``
 
         off_screen : bool
             Plots off screen when True.  Helpful for saving
@@ -71,7 +83,7 @@ class CyclicResult(ResultFile):
 
         screenshot : str or bool, optional
             Saves screenshot to file when enabled.  See:
-            help(pyvista.Plotter.screenshot).  Default disabled.
+            ``help(pyvista.Plotter.screenshot)``.  Default disabled.
 
             When True, takes screenshot and returns numpy array of
             image.
@@ -91,7 +103,7 @@ class CyclicResult(ResultFile):
         cpos : list
             List of camera position, focal point, and view up.
         """
-        cs_cord = self.resultheader['csCord']
+        cs_cord = self._resultheader['csCord']
         if cs_cord > 1:
             matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
             i_matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
@@ -132,39 +144,23 @@ class CyclicResult(ResultFile):
         else:
             plotter.camera_position = cpos
 
-        return plotter.plot()
+        return plotter.show()
 
     def _add_cyclic_properties(self):
-        """
-        Adds cyclic properties to result object
-
-        Makes the assumption that all the cyclic nodes are within tol
-        """
-        self.n_sector = self.resultheader['nSector']
+        """Add cyclic properties"""
 
         # idenfity the sector based on number of elements in master sector
-        cs_els = self.resultheader['csEls']
+        cs_els = self._resultheader['csEls']
         mask = self.quadgrid.cell_arrays['ansys_elem_num'] <= cs_els
 
         self.master_cell_mask = mask
         self.mas_grid = self.grid.extract_cells(mask)
 
-        # number of nodes in sector may not match number of nodes in geometry
-        # node_mask = self.geometry['nnum'] <= self.resultheader['csNds']
-        node_mask = self.nnum <= self.resultheader['csNds']
+        # NOTE: number of nodes in sector may not match number of
+        # nodes in geometry
+        node_mask = self._neqv[self._sidx] <= self._resultheader['csNds']
         self.mas_ind = np.nonzero(node_mask)[0]
-
-    def cs_4x4(self, cs_cord, as_vtk_matrix=False):
-        """ return a 4x4 transformation array for a given coordinate system """
-        # assemble 4 x 4 matrix
-        csys = self.geometry['coord systems'][cs_cord]
-        trans = np.hstack((csys['transformation matrix'],
-                           csys['origin'].reshape(-1, 1)))
-        matrix = trans_to_matrix(trans)
-        if as_vtk_matrix:
-            return matrix
-        else:
-            return pv.trans_from_matrix(matrix)
+        self.dup_ind = np.nonzero(~node_mask)[0]
 
     def nodal_solution(self, rnum, phase=0, full_rotor=False, as_complex=False,
                        in_nodal_coord_sys=False):
@@ -214,53 +210,56 @@ class CyclicResult(ResultFile):
         """
         # get the nodal result
         rnum = self.parse_step_substep(rnum)
-        nnum, result = super(CyclicResult, self).nodal_solution(rnum,
+        full_nnum, full_result = super(CyclicResult, self).nodal_solution(rnum,
                                                                 in_nodal_coord_sys)
-        result = result[self.mas_ind]
-        nnum = nnum[self.mas_ind]  # only concerned with the master sector
+
+        # only concerned with the master sector
+        result = full_result[self.mas_ind]
+        nnum = full_nnum[self.mas_ind]
 
         # combine or expand result if not modal
-        if self.resultheader['kan'] == 2:  # modal analysis
+        if self._resultheader['kan'] == 2:  # modal analysis
             # combine modal solution results
-            hindex_table = self.resultheader['hindex']
+            hindex_table = self._resultheader['hindex']
             hindex = hindex_table[rnum]
 
             # if repeated mode
-            last_index = hindex == int(self.resultheader['nSector']/2)
+            last_index = hindex == int(self._resultheader['nSector']/2)
             if hindex == 0 or last_index:
                 result_dup = np.zeros_like(result)
             else:  # otherwise, use the harmonic pair
                 hmask = np.abs(hindex_table) == abs(hindex)
                 hmatch = np.nonzero(hmask)[0]
 
-                even = not (hmatch.size % 2)
-                assert even, 'Harmonic result missing matching pair'
-                match_loc = np.where(hmatch == rnum)[0][0]
-                
-                if match_loc % 2:
-                    rnum_dup = rnum - 1
+                if hmatch.size % 2:
+                    # combine the matching sector
+                    result_dup = full_result[self.dup_ind]
                 else:
-                    rnum_dup = rnum + 1
+                    match_loc = np.where(hmatch == rnum)[0][0]
 
-                # get repeated result and combine
-                _, result_dup = super(CyclicResult, self).nodal_solution(rnum_dup)
+                    if match_loc % 2:
+                        rnum_dup = rnum - 1
+                    else:
+                        rnum_dup = rnum + 1
 
-            result_dup = result_dup[self.mas_ind]
+                    # get repeated result and combine
+                    _, full_result_dup = super(CyclicResult, self).nodal_solution(rnum_dup)
+                    result_dup = full_result_dup[self.mas_ind]
 
-            expanded_result = self.expand_cyclic_modal(result,
-                                                       result_dup,
-                                                       hindex, phase,
-                                                       as_complex,
-                                                       full_rotor)
+            expanded_result = self._expand_cyclic_modal(result,
+                                                        result_dup,
+                                                        hindex, phase,
+                                                        as_complex,
+                                                        full_rotor)
 
-        if self.resultheader['kan'] == 0:  # static analysis
+        if self._resultheader['kan'] == 0:  # static analysis
             expanded_result = self.expand_cyclic_static(result)
 
         return nnum, expanded_result
 
     def expand_cyclic_static(self, result, tensor=False):
         """ expands cyclic static results """
-        cs_cord = self.resultheader['csCord']
+        cs_cord = self._resultheader['csCord']
         if cs_cord > 1:
             matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
             i_matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
@@ -291,15 +290,19 @@ class CyclicResult(ResultFile):
             if tensor:
                 _binary_reader.tensor_arbitrary(full_result[i], trans)
             else:
-                _binary_reader.affline_transform_double(full_result[i], trans)
+                _binary_reader.affline_transform(full_result[i], trans)
 
         return full_result
 
-    def expand_cyclic_modal(self, result, result_r, hindex, phase, as_complex,
-                          full_rotor):
+    def _expand_cyclic_modal(self, result, result_r, hindex, phase, as_complex,
+                             full_rotor):
         """ Combines repeated results from ANSYS """
         if as_complex or full_rotor:
-            result_combined = result + result_r*1j
+            # Matches ansys direction
+            if self._positive_cyclic_dir:
+                result_combined = result + result_r*1j
+            else:
+                result_combined = result - result_r*1j
             if phase:
                 result_combined *= 1*np.cos(phase) - 1j*np.sin(phase)
         else:  # convert to real
@@ -314,8 +317,9 @@ class CyclicResult(ResultFile):
         angles = np.linspace(0, 2*np.pi, self.n_sector + 1)[:-1] + phase
         for angle in angles:
             # need to rotate solution and rotate direction
-            result_expanded.append(axis_rotation(result_combined, angle, deg=False,
-                                                axis='z'))
+            result_expanded.append(axis_rotation(result_combined,
+                                                 angle, deg=False,
+                                                 axis='z'))
 
         result_expanded = np.asarray(result_expanded)
 
@@ -337,8 +341,8 @@ class CyclicResult(ResultFile):
         else:
             return np.real(result_expanded)
 
-    def expand_cyclic_modal_stress(self, result, result_r, hindex, phase, as_complex,
-                                   full_rotor, scale=True):
+    def _expand_cyclic_modal_stress(self, result, result_r, hindex,
+                                    phase, as_complex, full_rotor):
         """ Combines repeated results from ANSYS """
         if as_complex or full_rotor:
             result_combined = result + result_r*1j
@@ -356,13 +360,6 @@ class CyclicResult(ResultFile):
                                    np.complex128)
         result_expanded[:] = result_combined
 
-        # scale
-        # if scale:
-        #     if hindex == 0 or hindex == self.n_sector/2:
-        #         result_expanded /= self.n_sector**0.5
-        #     else:
-        #         result_expanded /= (self.n_sector/2)**0.5
-
         f_arr = np.zeros(self.n_sector)
         f_arr[hindex] = 1
         jang = np.fft.ifft(f_arr)[:self.n_sector]*self.n_sector
@@ -375,7 +372,7 @@ class CyclicResult(ResultFile):
         #     isnan = _binary_reader.tensor_rotate_z(result_expanded[i], angle)
         #     result_expanded[i, isnan] = np.nan
 
-        cs_cord = self.resultheader['csCord']
+        cs_cord = self._resultheader['csCord']
         if cs_cord > 1:
             matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
             i_matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
@@ -408,22 +405,21 @@ class CyclicResult(ResultFile):
         return full_result
 
     def harmonic_index_to_cumulative(self, hindex, mode):
-        """
-        Converts a harmonic index and a 0 index mode number to a cumulative result
-        index.
+        """Converts a harmonic index and a 0 index mode number to a
+        cumulative result index.
 
-        Harmonic indices are stored as positive and negative pairs for modes other
-        than 0 and N/nsectors.
+        Harmonic indices are stored as positive and negative pairs for
+        modes other than 0 and N/nsectors.
 
         Parameters
         ----------
         hindex : int
-            Harmonic index.  Must be less than or equal to nsectors/2.  May be
-            positive or negative
+            Harmonic index.  Must be less than or equal to nsectors/2.
+            May be positive or negative
 
         mode : int
-            Mode number.  0 based indexing.  Access mode pairs by with a negative/positive
-            harmonic index.
+            Mode number.  0 based indexing.  Access mode pairs by with
+            a negative/positive harmonic index.
 
         Returns
         -------
@@ -431,7 +427,7 @@ class CyclicResult(ResultFile):
             Cumulative index number.  Zero based indexing.
 
         """
-        hindex_table = self.resultheader['hindex']
+        hindex_table = self._resultheader['hindex']
         if not np.any(abs(hindex) == np.abs(hindex_table)):
             raise Exception('Invalid harmonic index.\n' +
                             'Available indices: %s' % np.unique(hindex_table))
@@ -452,7 +448,7 @@ class CyclicResult(ResultFile):
     @property
     def mode_table(self):
         """ unique modes for cyclic results """
-        hindex_table = self.resultheader['hindex']
+        hindex_table = self._resultheader['hindex']
         diff = np.diff(np.abs(hindex_table))
         freqs = self.time_values
         mode_table = [0]
@@ -469,19 +465,16 @@ class CyclicResult(ResultFile):
         return np.asarray(mode_table)
 
     def nodal_stress(self, rnum, phase=0, as_complex=False, full_rotor=False):
-        """
-        Equivalent ANSYS command: PRNSOL, S
-
-        Retrieves the component stresses for each node in the
+        """Retrieves the component stresses for each node in the
         solution.
 
         The order of the results corresponds to the sorted node
         numbering.
 
-        This algorithm, like ANSYS, computes the nodal stress by
-        averaging the stress for each element at each node.  Due to
-        the discontinuities across elements, stresses will vary based
-        on the element they are evaluated from.
+        Computes the nodal stress by averaging the stress for each
+        element at each node.  Due to the discontinuities across
+        elements, stresses will vary based on the element they are
+        evaluated from.
 
         Parameters
         ----------
@@ -493,7 +486,7 @@ class CyclicResult(ResultFile):
             Phase adjustment of the stress in degrees.
 
         as_complex : bool, optional
-            Reports stess as a complex result.  Real and imaginary
+            Reports stress as a complex result.  Real and imaginary
             stresses correspond to the stress of the main and repeated
             sector.  Stress can be "rotated" using the phase
             parameter.
@@ -512,20 +505,27 @@ class CyclicResult(ResultFile):
             node.  For the corresponding node numbers, see where
             result is the result object.
 
+        Examples
+        --------
+        >>> import pyansys
+        >>> rst = pyansys.read_binary('file.rst')
+        >>> nnum, stress = rst.nodal_stress(0)
+
         Notes
         -----
         Nodes without a stress value will be NAN.
 
         """
+        rnum = self.parse_step_substep(rnum)
         nnum, stress = super(CyclicResult, self).nodal_stress(rnum)
         # nnum = nnum[self.mas_ind]
         # stress = stress[self.mas_ind]
 
-        if self.resultheader['kan'] == 0:  # static result
+        if self._resultheader['kan'] == 0:  # static result
             expanded_result = self.expand_cyclic_static(stress, tensor=True)
-        elif self.resultheader['kan'] == 2:  # modal analysis
+        elif self._resultheader['kan'] == 2:  # modal analysis
             # combine modal solution results
-            hindex_table = self.resultheader['hindex']
+            hindex_table = self._resultheader['hindex']
             hindex = hindex_table[rnum]
 
             # if repeated mode
@@ -541,68 +541,94 @@ class CyclicResult(ResultFile):
             else:
                 stress_r = np.zeros_like(stress)
 
-            expanded_result = self.expand_cyclic_modal_stress(stress,
-                                                              stress_r,
-                                                              hindex,
-                                                              phase,
-                                                              as_complex,
-                                                              full_rotor)
+            expanded_result = self._expand_cyclic_modal_stress(stress,
+                                                               stress_r,
+                                                               hindex,
+                                                               phase,
+                                                               as_complex,
+                                                               full_rotor)
         else:
-            raise Exception('Unsupported analysis type')
+            raise RuntimeError('Unsupported analysis type')
 
         return nnum, expanded_result
 
     def principal_nodal_stress(self, rnum, phase=0, as_complex=False,
                                full_rotor=False):
-        """
-        Returns principal nodal stress for a cumulative result
+        """Computes the principal component stresses for each node in
+        the solution.
 
+        Parameters
+        ----------
+        rnum : int or list
+            Cumulative result number with zero based indexing, or a
+            list containing (step, substep) of the requested result.
+
+        phase : float
+            Phase adjustment of the stress in degrees.
+
+        as_complex : bool, optional
+            Returns result as a complex number, otherwise as the real
+            part rotated by phase.  Default False.
+
+        full_rotor : bool, optional
+            Expand sector solution to full rotor.
+
+        Returns
+        -------
+        nodenum : numpy.ndarray
+            Node numbers of the result.
+
+        pstress : numpy.ndarray
+            Principal stresses, stress intensity, and equivalant stress.
+            [sigma1, sigma2, sigma3, sint, seqv]
+
+        Notes
+        -----
+        ANSYS equivalant of:
+        PRNSOL, S, PRIN
+
+        which returns:
+        S1, S2, S3 principal stresses, SINT stress intensity, and SEQV
+        equivalent stress.
         """
         if as_complex and full_rotor:
             raise Exception('complex and full_rotor cannot both be True')
-        
+
         # get component stress
         nnum, stress = self.nodal_stress(rnum, phase, as_complex, full_rotor)
 
         # compute principle stress
         if as_complex:
-            stress_r = np.imag(stress).astype(np.float32)
-            stress = np.real(stress).astype(np.float32)
+            stress_r = np.imag(stress)
+            stress = np.real(stress)
 
-            pstress, isnan = _binary_reader.ComputePrincipalStress(stress)
+            pstress, isnan = _binary_reader.compute_principal_stress(stress)
             pstress[isnan] = np.nan
-            pstress_r, isnan = _binary_reader.ComputePrincipalStress(stress_r)
+            pstress_r, isnan = _binary_reader.compute_principal_stress(stress_r)
             pstress_r[isnan] = np.nan
 
             return nnum, pstress + 1j*pstress_r
 
         elif full_rotor:
-            if stress.dtype != np.float32:
-                stress = stress.astype(np.float32)
-
             # compute principle stress
-            pstress = np.empty((self.n_sector, stress.shape[1], 5), np.float32)
+            pstress = np.empty((self.n_sector, stress.shape[1], 5), np.float64)
             for i in range(stress.shape[0]):
-                pstress[i], isnan = _binary_reader.ComputePrincipalStress(stress[i])
+                pstress[i], isnan = _binary_reader.compute_principal_stress(stress[i])
                 pstress[i, isnan] = np.nan
             return nnum, pstress
 
         else:
-            if stress.dtype != np.float32:
-                stress = stress.astype(np.float32)
-
-            pstress, isnan = _binary_reader.ComputePrincipalStress(stress)
+            pstress, isnan = _binary_reader.compute_principal_stress(stress)
             pstress[isnan] = np.nan
             return nnum, pstress
 
     def plot_nodal_solution(self, rnum, comp='norm', label='',
-                            cmap=None, flip_scalars=None, cpos=None,
+                            flip_scalars=None, cpos=None,
                             screenshot=None, off_screen=None,
                             full_rotor=True, phase=0,
                             node_components=None, sel_type_all=True,
                             **kwargs):
-        """
-        Plots a nodal result.
+        """Plots a nodal result.
 
         Parameters
         ----------
@@ -618,9 +644,6 @@ class CyclicResult(ResultFile):
 
         label : str, optional
             Annotation string to add to scalar bar in plot.
-
-        cmap : str, optional
-           Cmap string.  See available matplotlib cmaps.
 
         flip_scalars : bool, optional
             Flip direction of cmap.
@@ -661,8 +684,6 @@ class CyclicResult(ResultFile):
         if not full_rotor:
             return super(CyclicResult, self).plot_nodal_solution(rnum,
                                                                  comp,
-                                                                 # label,
-                                                                 cmap=cmap,
                                                                  flip_scalars=flip_scalars,
                                                                  cpos=cpos,
                                                                  screenshot=screenshot,
@@ -710,11 +731,11 @@ class CyclicResult(ResultFile):
                                                       sel_type_all)
             scalars = scalars[:, ind]
 
-        return self.plot_point_scalars(scalars, rnum, stitle, cmap, flip_scalars,
+        return self.plot_point_scalars(scalars, rnum, stitle, flip_scalars,
                                        screenshot, cpos, off_screen, grid,
                                        **kwargs)
 
-    def plot_nodal_stress(self, rnum, stype, label='', cmap=None,
+    def plot_nodal_stress(self, rnum, stype, label='',
                           flip_scalars=None, cpos=None, screenshot=None,
                           off_screen=None, full_rotor=True, phase=0,
                           node_components=None, sel_type_all=True,
@@ -733,9 +754,6 @@ class CyclicResult(ResultFile):
 
         label : str, optional
             Annotation string to add to scalar bar in plot.
-
-        cmap : str, optional
-           Cmap string.  See available matplotlib cmaps.
 
         flip_scalars : bool, optional
             Flip direction of cmap.
@@ -795,14 +813,13 @@ class CyclicResult(ResultFile):
         # scalars[np.isnan(scalars)] = 0
         stitle = 'Cyclic Rotor\nNodal Stress\n%s\n' % stype.capitalize()
         if full_rotor:
-            return self.plot_point_scalars(scalars, rnum, stitle, cmap, flip_scalars,
+            return self.plot_point_scalars(scalars, rnum, stitle, flip_scalars,
                                            screenshot, cpos, off_screen, grid,
                                            **kwargs)
 
         return super(CyclicResult, self)._plot_point_scalars(scalars[0],
                                                              rnum,
                                                              stitle=stitle,
-                                                             cmap=cmap,
                                                              flip_scalars=flip_scalars,
                                                              screenshot=screenshot,
                                                              cpos=cpos,
@@ -811,7 +828,7 @@ class CyclicResult(ResultFile):
                                                              **kwargs)
 
 
-    def plot_principal_nodal_stress(self, rnum, stype, cmap=None,
+    def plot_principal_nodal_stress(self, rnum, stype,
                                     flip_scalars=None, cpos=None,
                                     screenshot=None, off_screen=None,
                                     full_rotor=True, phase=0,
@@ -833,11 +850,6 @@ class CyclicResult(ResultFile):
             Stress type must be a string from the following list:
 
             ['1', '2', '3', 'INT', 'EQV']
-
-        cmap : str, optional
-           Cmap string.  See available matplotlib cmaps.  Only
-           applicable for when displaying scalars.  Defaults None
-           (rainbow).  Requires matplotlib.
 
         flip_scalars : bool, optional
             Flip direction of cmap.
@@ -908,13 +920,13 @@ class CyclicResult(ResultFile):
                                                       sel_type_all, self.mas_grid)
             scalars = scalars[ind]
 
-        return self.plot_point_scalars(scalars, rnum, stitle, cmap,
+        return self.plot_point_scalars(scalars, rnum, stitle,
                                        flip_scalars, screenshot, cpos,
                                        off_screen, grid, **kwargs)
 
     def animate_nodal_solution(self, rnum, comp='norm', max_disp=0.1,
                                nangles=180, show_phase=True,
-                               show_result_info=True,
+                               show_result_info=True, loop=True,
                                interpolate_before_map=True, cpos=None,
                                movie_filename=None, off_screen=None,
                                **kwargs):
@@ -965,14 +977,14 @@ class CyclicResult(ResultFile):
         if kwargs.pop('smooth_shading', False):
             raise Exception('"smooth_shading" is not yet supported')
 
-        interactive = kwargs.pop('interactive', None)
+        # interactive = kwargs.pop('interactive', None)
 
         # normalize nodal solution
         nnum, complex_disp = self.nodal_solution(rnum, as_complex=True,
-                                                full_rotor=True)
+                                                 full_rotor=True)
         complex_disp /= (np.abs(complex_disp).max()/max_disp)
         complex_disp = complex_disp.reshape(-1, 3)
-        
+
         if comp == 'x':
             axis = 0
         elif comp == 'y':
@@ -993,10 +1005,11 @@ class CyclicResult(ResultFile):
         if show_result_info:
             result_info = self.text_result_table(rnum)
 
+        plot_mesh = full_rotor.copy()
         plotter = pv.Plotter(off_screen=off_screen)
-        plotter.add_mesh(full_rotor.copy(), scalars=np.real(scalars),
-                      interpolate_before_map=interpolate_before_map, **kwargs)
-        plotter.update_coordinates(orig_pt + np.real(complex_disp), render=False)
+        plotter.add_mesh(plot_mesh, scalars=np.real(scalars),
+                         interpolate_before_map=interpolate_before_map, **kwargs)
+        # plotter.update_coordinates(orig_pt + np.real(complex_disp), render=False)
 
         # setup text
         plotter.add_text(' ', font_size=20, position=[0, 0])
@@ -1007,11 +1020,18 @@ class CyclicResult(ResultFile):
         if movie_filename:
             plotter.open_movie(movie_filename)
 
+        self._animating = True
+        def q_callback():
+            """exit when user wants to leave"""
+            self._animating = False
+
+        plotter.add_key_event("q", q_callback)
+
         # run until q is pressed
-        plotter.plot(interactive=False, auto_close=False,
+        plotter.show(interactive=False, auto_close=False,
                      interactive_update=True)
         first_loop = True
-        while not plotter.q_pressed:
+        while self._animating:
             for angle in np.linspace(0, np.pi*2, nangles):
                 padj = 1*np.cos(angle) - 1j*np.sin(angle)
                 complex_disp_adj = np.real(complex_disp*padj)
@@ -1022,23 +1042,23 @@ class CyclicResult(ResultFile):
                     scalars = (complex_disp_adj*complex_disp_adj).sum(1)**0.5
 
                 plotter.update_scalars(scalars, render=False)
-                plotter.update_coordinates(orig_pt + complex_disp_adj,
-                                        render=False)
+                plot_mesh.points[:] = orig_pt + complex_disp_adj
 
                 if show_phase:
                     plotter.textActor.SetInput('%s\nPhase %.1f Degrees' %
-                                             (result_info, (angle*180/np.pi)))
+                                               (result_info, (angle*180/np.pi)))
 
-                plotter.update(30, force_redraw=True)
-
-                if plotter.q_pressed:
-                    break
+                plotter.update(1, force_redraw=True)
 
                 if movie_filename and first_loop:
                     plotter.write_frame()
 
+                if not self._animating:
+                    break
+
             first_loop = False
-            if off_screen or not interactive:
+
+            if not loop:
                 break
 
         return plotter.close()
@@ -1047,7 +1067,7 @@ class CyclicResult(ResultFile):
         """ Create full rotor vtk unstructured grid """
         grid = self.mas_grid.copy()
         # transform to standard coordinate system
-        cs_cord = self.resultheader['csCord']
+        cs_cord = self._resultheader['csCord']
         if cs_cord > 1:
             matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
             grid.transform(matrix)
@@ -1069,11 +1089,10 @@ class CyclicResult(ResultFile):
 
         return full_rotor
 
-    def plot_point_scalars(self, scalars, rnum=None, stitle='', cmap=None,
+    def plot_point_scalars(self, scalars, rnum=None, stitle='',
                            flip_scalars=None, screenshot=None, cpos=None,
                            off_screen=None, grid=None, add_text=True, **kwargs):
-        """
-        Plot point scalars on active mesh.
+        """Plot point scalars on active mesh.
 
         Parameters
         ----------
@@ -1086,10 +1105,6 @@ class CyclicResult(ResultFile):
 
         stitle : str, optional
             Title of the scalar bar.
-
-        cmap : str, optional
-            See matplotlib cmaps:
-            matplotlib.org/examples/color/cmaps_reference.html
 
         flip_scalars : bool, optional
             Reverses the direction of the cmap.
@@ -1124,26 +1139,21 @@ class CyclicResult(ResultFile):
         if grid is None:
             grid = self.mas_grid
 
-        # make cmap match default ansys
-        if cmap is None and flip_scalars is None:
-            flip_scalars = False
-
         window_size = kwargs.pop('window_size', None)
         full_screen = kwargs.pop('full_screen', False)
+        cmap = kwargs.pop('cmap', 'jet')
 
         # Plot off screen when not interactive
         plotter = pv.Plotter(off_screen=off_screen)
         if 'show_axes' in kwargs:
             plotter.add_axes()
-        # plotter.add_axes_at_origin()
-        # breakpoint()
 
-        if 'background' in kwargs:
-            plotter.background_color = kwargs['background']
+        # set background
+        plotter.background_color = kwargs.pop('background', None)
 
         rng = [np.nanmin(scalars), np.nanmax(scalars)]
 
-        cs_cord = self.resultheader['csCord']
+        cs_cord = self._resultheader['csCord']
         if cs_cord > 1:
             matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
             i_matrix = self.cs_4x4(cs_cord, as_vtk_matrix=True)
@@ -1191,7 +1201,7 @@ class CyclicResult(ResultFile):
                              position=[0, 0])
 
         if screenshot:
-            cpos = plotter.show(auto_close=False, interactive=interactive,
+            cpos = plotter.show(auto_close=False,
                                 window_size=window_size,
                                 full_screen=full_screen)
             if screenshot is True:
@@ -1200,7 +1210,7 @@ class CyclicResult(ResultFile):
                 plotter.screenshot(screenshot)
             plotter.close()
         else:
-            cpos = plotter.plot(window_size=window_size, full_screen=full_screen)
+            cpos = plotter.show(window_size=window_size, full_screen=full_screen)
 
         if screenshot is True:
             return cpos, img

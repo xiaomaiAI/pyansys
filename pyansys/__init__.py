@@ -5,14 +5,16 @@ from pyansys._version import __version__
 from pyansys.archive import (Archive, write_cmblock, write_nblock,
                              save_as_archive)
 
+from pyansys.cell_quality import quality
 from pyansys.common import read_binary
-from pyansys.cellquality import *
 from pyansys.convert import convert_script
-from pyansys.mapdl import ANSYS, Mapdl
+from pyansys.mapdl import launch_mapdl
 from pyansys.mapdl import change_default_ansys_path
+
 
 # Sphinx-gallery tools
 from pyansys.sphinx_gallery import Scraper, _get_sg_image_scraper
+
 
 try:
     from pyansys import mapdl
@@ -35,3 +37,16 @@ except:
 
 
 from pyansys.examples.downloads import *
+
+
+def configure_pyvista():
+    """Configure PyVista's ``rcParams`` for pyansys"""
+    import pyvista as pv
+    pv.rcParams['interactive'] = True
+    pv.rcParams["cmap"] = "jet"
+    pv.rcParams["font"]["family"] = "courier"
+    pv.rcParams["title"] = "pyansys"
+    return
+
+
+configure_pyvista()

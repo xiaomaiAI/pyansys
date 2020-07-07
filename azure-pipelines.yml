@@ -1,6 +1,7 @@
-# azure pipelines build pyansys
+# azure pipelines build and test pyansys
 
 variables:
+  ALLOW_PLOTTING: true
   package_name: pyansys
 
 
@@ -20,29 +21,25 @@ jobs:
     matrix:
       Python35:
         python.version: '3.5'
-        python.architecture: 'x64'
       Python36:
         python.version: '3.6'
-        python.architecture: 'x64'
       Python37:
         python.version: '3.7'
-        python.architecture: 'x64'
+      Python38:
+        python.version: '3.8'
   pool:
     vmImage: 'ubuntu-16.04'
   steps:
-    - template: .ci/checkout.yml
     - task: UsePythonVersion@0
       inputs:
-        versionSpec: '3.7'
+        versionSpec: '$(python.version)'
       displayName: 'Use Python $(python.version)'
     - script: |
-        docker pull quay.io/pypa/manylinux2010_x86_64
-      displayName: Pull Docker Image
-    - script: |
         set -ex
+        docker pull quay.io/pypa/manylinux2010_x86_64
         docker run -e package_name=$(package_name) --rm -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/.ci/build_wheels.sh $(python.version)
-        cd ..
-      displayName: Build wheels
+      displayName: Build wheels using manylinux2010
+    - template: .ci/azure-steps.yml      
     - template: .ci/azure-publish-dist.yml
 
 - job: Windows
@@ -50,18 +47,19 @@ jobs:
     matrix:
       Python35:
         python.version: '3.5'
-        python.architecture: 'x64'
       Python36:
         python.version: '3.6'
-        python.architecture: 'x64'
       Python37:
         python.version: '3.7'
-        python.architecture: 'x64'
+      Python38:
+        python.version: '3.8'
   pool:
     vmImage: 'vs2017-win2016'
   steps:
-    - template: .ci/checkout.yml
-    - template: .ci/azure-setup.yml
+    - task: UsePythonVersion@0
+      inputs:
+        versionSpec: $(python.version)
+        addToPath: true
     - template: .ci/azure-steps.yml
     - template: .ci/azure-publish-dist.yml
 
@@ -74,23 +72,24 @@ jobs:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
+      Python38:
+        python.version: '3.8'
   pool:
-    vmImage: 'macOS-10.14'
+    vmImage: 'macOS-10.15'
   steps:
-    - template: .ci/checkout.yml
-    - template: .ci/azure-setup.yml
+    - script: .ci/macos-install-python.sh '$(python.version)'
+      displayName: Install Python
     - template: .ci/azure-steps.yml
     - template: .ci/azure-publish-dist.yml
 
-- job: build_docs
-  variables:
-    gh_user: akaszynski
-    gh_repo: pyansys.github.io
-    gh_pass: $(github_pat)
-    gh_email: $(github_email)
-    gh_auth_header: $(echo -n "${gh_user}:$(github_pat)" | base64);
-  pool:
-    vmImage: 'ubuntu-16.04'
-  steps:
-    - template: .ci/checkout.yml
-    - template: .ci/build_documentation.yml
+# - job: build_docs
+#   variables:
+#     gh_user: akaszynski
+#     gh_repo: pyansys.github.io
+#     gh_pass: $(github_pat)
+#     gh_email: $(github_email)
+#     gh_auth_header: $(echo -n "${gh_user}:$(github_pat)" | base64);
+#   pool:
+#     vmImage: 'ubuntu-16.04'
+#   steps:
+#     - template: .ci/build_documentation.yml
